@@ -1,0 +1,44 @@
+name: Build Android APK
+
+on:
+  push:
+    paths:
+      - 'project.zip.b64'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Prepare project
+        run: |
+          base64 -d project.zip.b64 > project.zip
+          mkdir appsrc
+          unzip -q project.zip -d appsrc
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build debug APK
+        run: gradle -p appsrc assembleDebug --stacktrace
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: donyaye-oloom-debug-apk
+          path: appsrc/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
